@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Project specific
+quintilian-cdk/
+lambda_package/
+python/
+*.zip
+test_audio.wav
+
+# Virtual Environment
+venv/
+ENV/
+env/
+client_venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# AWS
+.aws/
+*.pem
+
+# Audio files
+audio/
+client/audio/
+*.wav
+*.mp3
+*.ogg
+*.flac
+
+# Environment variables
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Local development
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local 

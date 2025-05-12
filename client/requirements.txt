@@ -1,0 +1,8 @@
+openai
+pyaudio
+numpy
+requests
+sounddevice
+soundfile
+python-dotenv
+pvporcupine 
