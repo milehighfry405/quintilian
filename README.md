@@ -17,6 +17,7 @@ quintilian-laptop/
 │   ├── deploy_ec2.py     # EC2 deployment script
 │   ├── main.py           # FastAPI server implementation
 │   └── requirements.txt  # Server dependencies
+├── venv/                  # Server virtual environment (not tracked by git, currently in root)
 ├── test_api.py           # API testing script
 └── .env                  # Environment variables (not in git)
 ```
