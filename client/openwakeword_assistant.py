@@ -12,6 +12,9 @@ from datetime import datetime
 import openwakeword
 from openwakeword.model import Model
 from config import SERVER_URL, AUDIO_SETTINGS
+from prompt_builder import PromptBuilder
+
+print("Starting OpenWakeWord Assistant...")  # Test print statement
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -244,4 +247,17 @@ class OpenVoiceAssistant:
         logger.info("Stopping OpenVoice Assistant...")
         self.should_stop_recording = True
         if self.processing_thread and self.processing_thread.is_alive():
-            self.processing_thread.join() 
+            self.processing_thread.join()
+
+if __name__ == "__main__":
+    try:
+        assistant = OpenVoiceAssistant()
+        print("Assistant created, starting...")
+        assistant.start()
+    except KeyboardInterrupt:
+        print("\nStopping assistant...")
+        assistant.stop()
+    except Exception as e:
+        print(f"Error: {e}")
+        if 'assistant' in locals():
+            assistant.stop() 

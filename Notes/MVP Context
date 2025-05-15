@@ -1,0 +1,204 @@
+## 📝 Instructions for Cursor AI Assistants
+
+### How to Use This File
+1. **Always read this file first** when starting a new chat session
+2. **Check the Current Build Phase** section to understand what we're working on
+3. **Review the Implementation Tasks** to see what needs to be done
+4. **Track progress** using the checkboxes in the MVP Deliverables Checklist
+5. **Maintain context** by referring back to the Product Overview when needed
+
+### Key Files to Reference
+- `client/openwakeword_assistant.py`: Main voice assistant implementation
+- `client/prompt_builder.py`: Context-aware prompt generation
+- `client/database/`: Database models and connection
+- `client/config.py`: Configuration settings
+
+### Development Guidelines
+1. Keep changes focused on the current build phase
+2. Update checkboxes as tasks are completed
+3. Document any new dependencies or requirements
+4. Maintain backward compatibility
+5. Test changes thoroughly before marking tasks complete
+6. All server code in `/server/` directory is deployed on AWS and should not be modified locally
+
+### 🚨 Important Development Rules
+1. **Server Modifications**
+   - The server is hosted on AWS and should NOT be modified locally
+   - All server code in `/server/` directory is deployed on AWS
+   - If server changes are needed, we MUST have a conversation first
+   - Server changes require careful planning to avoid breaking the production environment
+   - All server-related discussions should be clearly marked and documented
+
+2. **Running the Application**
+   - The main application is `client/openwakeword_assistant.py`
+   - Always run from the client directory using PowerShell
+   - Steps to run:
+     1. Open PowerShell in the client directory
+     2. Activate virtual environment: `.\client-venv\Scripts\Activate.ps1`
+     3. Run the assistant: `python openwakeword_assistant.py`
+   - The application connects to the AWS server automatically
+   - Make sure all dependencies are installed: `pip install -r requirements.txt`
+
+3. **Legacy Code**
+   - Picovoice implementation is in `client/legacy/`
+   - These files are kept for reference but are not actively used
+   - Do not modify legacy code unless specifically requested
+
+4. **Environment Setup**
+   - Using PowerShell on Windows 10
+   - Python virtual environment in `client/client-venv/`
+   - All dependencies listed in `requirements.txt`
+   - Audio files stored in `client/audio/`
+   - Configuration in `client/config.py`
+
+### 📚 File Purpose Guide
+
+#### MVP Context (This File)
+- **Purpose**: Development roadmap and progress tracking
+- **Contents**:
+  - Current build phase and tasks
+  - Implementation checklists
+  - Success criteria
+  - Product vision and requirements
+- **Use Case**: Active development reference and progress tracking
+
+#### README.md
+- **Purpose**: Project documentation and setup guide
+- **Contents**:
+  - Installation instructions
+  - Environment setup
+  - Running the application
+  - API documentation
+  - Troubleshooting guide
+- **Use Case**: Getting started and technical reference
+
+---
+
+## 📋 MVP Deliverables Checklist
+
+### Core Components
+- [x] Wake-word detection + audio capture → backend → audio reply (working basic loop)
+- [ ] Dynamic schedule engine (backend service)
+- [ ] Memory database layer (`family_profile`, `daily_context`, `activity_log`)
+- [ ] Custom GPT prompt builder (injects memory + science tips if relevant)
+- [ ] Portal UI skeleton (daily log, checklist view, progress report preview)
+- [ ] Basic science-backed parenting module (Wonder Weeks + common regressions)
+
+### Current Status
+- Wake word detection implemented with OpenWakeWord
+- Basic audio processing and backend communication in place
+- Server infrastructure set up with FastAPI on AWS
+- Client-side implementation with audio capture and processing
+
+### 🔄 Current Build Phase: Memory & Prompt Engine
+
+#### Implementation Tasks
+1. Database Setup
+   - [ ] Create SQLite database schema
+   - [ ] Implement database models for:
+     - [ ] `daily_context` (schedule, adjustments, overrides)
+     - [ ] `family_profile` (child info, preferences)
+     - [ ] `activity_log` (completed activities, timestamps)
+
+2. Backend Enhancements
+   - [ ] Add database connection and models
+   - [ ] Implement CRUD operations for each table
+   - [ ] Create schedule management endpoints
+   - [ ] Add schedule adjustment logic
+
+3. Prompt Engineering
+   - [ ] Design prompt template structure
+   - [ ] Implement context injection system
+   - [ ] Add schedule awareness to responses
+   - [ ] Create routine management logic
+
+4. Voice Command Processing
+   - [ ] Add schedule adjustment commands
+   - [ ] Implement override handling
+   - [ ] Create activity logging system
+
+#### Success Criteria
+- [ ] Assistant maintains context of daily schedule
+- [ ] Schedule adjustments via voice work correctly
+- [ ] Responses reflect current schedule and activities
+- [ ] All data persists between sessions
+- [ ] System handles basic schedule conflicts
+
+---
+
+## 🛡 Product Overview:
+
+**Working Title:** *Smart Household Child Development Assistant*
+
+### What is it?
+
+An AI-powered voice assistant + dashboard that **helps affluent, busy families ensure their toddlers are receiving world-class, structured, science-backed daily activities, routines, and care — without the parents needing to plan, research, or micromanage.**
+The assistant acts as a **household manager, nanny coach, parenting guide, and activity scheduler — all in one.**
+It runs on existing hardware (desktop, Bluetooth speakerphone), uses wake word detection, GPT + ElevenLabs, and a structured backend memory system.
+
+---
+
+### Core Value Proposition:
+
+**For parents who want the best for their child, but don't have the time to plan or enforce it, this assistant becomes the invisible household brain — ensuring the child receives elite instruction, routines, and care while keeping parents confidently informed and hands-free.**
+Everything is **backed by science, explained transparently, and feels like a calm co-parent that never sleeps.**
+
+---
+
+## 🎯 Core Problem It Solves:
+
+* Parents with **resources but no time** to plan, schedule, or learn about developmental frameworks.
+* Nannies/caregivers need **structure, accountability, and oversight — without extra work for the parents.**
+* Parents want to **feel they are doing the best for their child** — but **don't want another app to manage.**
+* Existing assistants (Alexa, Siri) **lack context, parenting expertise, or structured child development workflows.**
+
+---
+
+### Target User:
+
+* Affluent stay-at-home parents.
+* Parents employing nannies or rotating caregivers.
+* Busy working parents seeking **high-trust, low-effort tools.**
+
+---
+
+## 🔧 System Overview (Simplified for Cursor/Dev Team):
+
+1. **Device Side (User)**
+   * Wake-word detection locally.
+   * Audio sent to backend.
+   * Audio reply streamed back (MP3/Opus), played locally.
+   * No permanent audio storage on device.
+
+2. **Backend (AWS Hosted)**
+   * **GPT 3.5/4 API** (with custom prompt including dynamic memory, schedule, mood).
+   * **ElevenLabs API** for audio generation.
+   * **SQLite + JSON + S3 (or DynamoDB if scaling)** for memory, daily schedule, activity logs.
+   * **Daily schedule engine & checklist logic runs in backend.**
+   * **Parent-facing web portal for viewing logs, checklists, progress reports.**
+
+3. **Memory Management**
+   * **Short-term (daily context, mood, overrides).**
+   * **Long-term (family profile, developmental progress logs, preferences).**
+   * **Science-backed recommendations system (parenting models like Wonder Weeks, etc.) embedded in backend logic — can be file-based or integrated later via APIs.**
+
+---
+
+### MVP Deliverables (to start building in Cursor or anywhere):
+
+* Wake-word detection + audio capture → backend → audio reply (working basic loop).
+* Dynamic schedule engine (backend service).
+* Memory database layer (`family_profile`, `daily_context`, `activity_log`).
+* Custom GPT prompt builder (injects memory + science tips if relevant).
+* Portal UI skeleton (daily log, checklist view, progress report preview).
+* Basic science-backed parenting module (Wonder Weeks + common regressions hardcoded as data files).
+
+---
+
+### Engineering Notes:
+
+* **You DO NOT need LangChain or agents frameworks yet — your backend acts as the agent.**
+* Use **simple, clean services with clear interfaces (e.g., Python FastAPI, SQLite, S3, React dashboard).**
+* Treat the GPT like an **LLM brain-in-a-jar** — you **feed it structured memory via prompt**.
+* **Focus first on predictable, rule-based behavior. Magic will come from your memory and context injection, not from GPT trying to be creative.**
+

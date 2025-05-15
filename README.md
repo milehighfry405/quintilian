@@ -1,150 +1,96 @@
-# Quintilian Voice Assistant
+# Smart Household Child Development Assistant
 
-A voice-controlled assistant that uses wake word detection and natural language processing to answer questions. The system consists of a client application that runs locally and a server that processes audio and generates responses.
+An AI-powered voice assistant that helps families manage toddler activities and development through voice interaction and structured routines.
 
-## Project Structure
-
-```
-quintilian/
-├── client/                 # Client application
-│   ├── audio/             # Directory for storing audio responses
-│   ├── config.py          # Configuration settings
-│   ├── requirements.txt   # Python dependencies
-│   ├── picovoice_assistant.py # Picovoice implementation
-│   ├── picovoice_wake_word_service.py # Picovoice wake word service
-│   ├── openwakeword_assistant.py # OpenWakeWord implementation
-│   └── test_openwakeword.py # OpenWakeWord test script
-├── server/                # Server application
-│   ├── audio/            # Directory for storing server audio files
-│   ├── deploy_ec2.py     # EC2 deployment script
-│   ├── main.py           # FastAPI server implementation
-│   └── requirements.txt  # Server dependencies
-├── venv/                  # Server virtual environment (not tracked by git)
-├── test_api.py           # API testing script
-└── .env                  # Environment variables (not in git)
-```
-
-## Wake Word Implementations
-
-The project provides two different wake word detection implementations:
-
-### 1. Picovoice Implementation
-- **Files:**
-  - `picovoice_assistant.py`: Main assistant implementation using Picovoice
-  - `picovoice_wake_word_service.py`: Wake word detection service using Picovoice
-- **Wake Word System:** Picovoice Porcupine
-- **Requirements:**
-  - Picovoice access key (required)
-  - PyAudio
-  - pvporcupine
-- **Wake Word:** "Hey Jarvis"
-
-### 2. OpenWakeWord Implementation
-- **Files:**
-  - `openwakeword_assistant.py`: Main assistant implementation using OpenWakeWord
-  - `test_openwakeword.py`: Test script for OpenWakeWord implementation
-- **Wake Word System:** OpenWakeWord
-- **Requirements:**
-  - sounddevice
-  - numpy
-  - openwakeword
-- **Wake Word:** "Hey Jarvis"
-
-## Setup Instructions
+## 🚀 Quick Start
 
 ### Prerequisites
+- Windows 10
+- PowerShell
 - Python 3.8 or higher
-- AWS account (for server deployment)
-- Picovoice account (for Picovoice implementation only)
+- Microphone and speakers
 
-### Client Setup
-1. Create a virtual environment:
-   ```bash
+### Installation
+
+1. Clone the repository
+2. Navigate to the client directory:
+   ```powershell
    cd client
-   python -m venv venv
-   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
    ```
 
-2. Install dependencies:
-   ```bash
+3. Create and activate virtual environment:
+   ```powershell
+   python -m venv client-venv
+   .\client-venv\Scripts\Activate.ps1
+   ```
+
+4. Install dependencies:
+   ```powershell
    pip install -r requirements.txt
    ```
 
-3. For Picovoice implementation, create a `.env` file in the client directory:
-   ```
-   PICOVOICE_ACCESS_KEY=your_access_key_here
-   ```
+### Running the Assistant
 
-### Server Setup
-1. Create a virtual environment:
-   ```bash
-   cd server
-   python -m venv venv
-   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+1. Make sure you're in the client directory
+2. Activate the virtual environment if not already activated:
+   ```powershell
+   .\client-venv\Scripts\Activate.ps1
    ```
 
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
+3. Run the assistant:
+   ```powershell
+   python openwakeword_assistant.py
    ```
 
-3. Deploy to EC2:
-   ```bash
-   python deploy_ec2.py
-   ```
+## 📁 Project Structure
 
-## Usage
-
-### Running the Voice Assistant
-
-#### Picovoice Implementation
-```bash
-cd client
-python picovoice_assistant.py
+```
+client/
+├── audio/              # Audio files for responses
+├── database/           # Local database models and connection
+├── legacy/            # Legacy Picovoice implementation
+├── tests/             # Test files
+├── config.py          # Configuration settings
+├── openwakeword_assistant.py  # Main voice assistant implementation
+├── prompt_builder.py  # Context-aware prompt generation
+└── requirements.txt   # Python dependencies
 ```
 
-#### OpenWakeWord Implementation
-```bash
-cd client
-python openwakeword_assistant.py
-```
+## 🔧 Configuration
 
-### Audio Feedback
-- Wake word detected: 1000Hz tone (0.5s)
-- Start recording: 800Hz tone (0.3s)
-- Stop recording: 400Hz tone (0.2s)
-- Processing: 600Hz tone (0.3s)
+- Server URL and other settings can be modified in `config.py`
+- Audio settings can be adjusted in the assistant code
+- Wake word sensitivity can be tuned in the code
 
-## Configuration
+## 🎯 Features
 
-### Picovoice Configuration
-- Requires a valid Picovoice access key
-- Wake word sensitivity can be adjusted in `picovoice_wake_word_service.py`
-- Audio settings are configured in `config.py`
+- Wake word detection using OpenWakeWord
+- Voice command processing
+- Context-aware responses
+- Integration with AWS backend
+- Audio response generation
 
-### OpenWakeWord Configuration
-- No API key required
-- Wake word sensitivity can be adjusted in `openwakeword_assistant.py`
-- Audio settings are configured in `config.py`
+## ⚠️ Important Notes
 
-### Audio Settings
-- Sample Rate: 16000 Hz
-- Channels: 1 (Mono)
-- Format: 16-bit PCM
-- Chunk Size: 1024 samples
+- The server is hosted on AWS and should not be modified locally
+- All server code in `/server/` directory is deployed on AWS
+- Make sure your microphone and speakers are properly configured
+- The assistant requires an internet connection to communicate with the AWS server
 
-## Server Deployment
+## 🐛 Troubleshooting
 
-The server is deployed on AWS EC2 with an Elastic IP (13.57.89.95). The deployment process is automated using the `deploy_ec2.py` script, which:
-1. Creates an EC2 instance
-2. Sets up the Python environment
-3. Installs dependencies
-4. Configures the service to run on startup
+1. If you get a "No module found" error:
+   - Make sure you're in the virtual environment
+   - Run `pip install -r requirements.txt` again
 
-## Notes
-- The server uses port 8000
-- Audio files are stored in the `client/audio` directory
-- The OpenWakeWord implementation is free to use and doesn't require an API key
-- The Picovoice implementation requires a valid access key but may provide better wake word detection
-- Both implementations use the same backend server for processing commands
-- The server is accessible at http://13.57.89.95:8000 
+2. If audio isn't working:
+   - Check your microphone and speaker settings
+   - Ensure the audio devices are properly connected
+
+3. If the assistant isn't responding:
+   - Check your internet connection
+   - Verify the server URL in `config.py`
+
+## 📝 License
+
+This project is proprietary and confidential. 

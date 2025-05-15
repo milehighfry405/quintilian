@@ -6,4 +6,5 @@ sounddevice
 soundfile
 python-dotenv
 pvporcupine
-openwakeword 
+openwakeword
+sqlalchemy 
