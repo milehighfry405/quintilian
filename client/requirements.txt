@@ -5,4 +5,5 @@ requests
 sounddevice
 soundfile
 python-dotenv
-pvporcupine 
+pvporcupine
+openwakeword 
