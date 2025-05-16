@@ -9,7 +9,7 @@ SERVER_DOMAIN = "13.57.89.95"
 SERVER_URL = f"http://{SERVER_DOMAIN}:8000"
 
 # Wake word settings
-WAKE_WORD = "yo punk"
+WAKE_WORD = "hey_jarvis"
 
 # Audio settings
 AUDIO_SETTINGS = {

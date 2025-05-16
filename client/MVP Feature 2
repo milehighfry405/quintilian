@@ -1,0 +1,143 @@
+---
+
+## 🛠 `assistant-memory-prompt-mvp.md`
+
+### Smart Household Assistant — MVP Memory & Prompt Layer Spec
+
+---
+
+## 📋 Status Key:
+
+* ✅ - Completed/Tested/Working
+* ⏳ - Pending/Not Yet Implemented
+* 🔄 - In Progress/Being Worked On
+* ❌ - Failed/Needs Fixing
+* 📝 - Implementation Note/Technical Detail
+
+---
+
+## ✅ Goal:
+
+Build the **Memory Layer + Prompt Builder** for the household assistant.
+We're adding basic context-awareness so GPT can respond like it knows today's schedule & child info.
+Wake word/audio flow is already working — this task focuses on backend logic.
+
+---
+
+## ✅ Scope:
+
+* Use **local SQLite DB (MVP)** for context storage.
+* Focus on **family profile & today's schedule** only.
+* Build a **Prompt Builder function** that assembles context + user query into a GPT prompt.
+
+---
+
+## 🗃 Database (simple for MVP):
+
+### Table: `family_profile`
+
+| Field       | Type | Example |
+| ----------- | ---- | ------- |
+| child_name | TEXT | "Emma"  |
+| child_age  | REAL | 2.5     |
+
+### Table: `daily_context`
+
+| Field          | Type | Example                       |
+| -------------- | ---- | ----------------------------- |
+| activity_name | TEXT | "Nap"                         |
+| start_time    | TEXT | "14:00"                       |
+| end_time      | TEXT | "15:00"                       |
+| status        | TEXT | scheduled, completed, delayed |
+
+---
+
+## ✅ Backend Flow:
+
+1. Receive user query (simulate text input for now).
+2. Query `family_profile` and `daily_context`.
+3. Build structured GPT prompt with:
+
+   * Child name & age.
+   * Current & next scheduled activities.
+   * Today's date.
+   * User's query.
+4. Send to GPT.
+5. Return GPT response.
+
+---
+
+## ✅ Testing Flow (No wake word/audio needed):
+
+* Build a simple **CLI test harness (run_test.py)**:
+
+  * Input: text query (e.g., "What's next today?").
+  * Output: constructed GPT prompt (print to console).
+* This allows fast iteration on DB → Prompt → GPT flow.
+* No need to trigger wake word/audio chain for testing.
+
+---
+
+## ✅ Test Cases:
+
+1. Query: "What's next today?"
+
+   * Prompt includes Emma's current & next activities.
+   * ✅ TESTED: Successfully integrated with audio input
+   * ✅ Context properly injected into system prompt
+   * ✅ GPT responses reflect schedule awareness
+
+2. Query: "Delay nap 30 min"
+
+   * Update nap block in DB.
+   * Confirm future prompts reflect change.
+   * ⏳ PENDING: Schedule modification via voice
+
+3. Query: "How has Emma done today?"
+
+   * Inject completed activities (basic log optional).
+   * ⏳ PENDING: Activity logging implementation
+
+---
+
+## ✅ Success Criteria:
+
+* ✅ Prompts include correct context based on DB.
+* ⏳ Changes via queries are reflected in future prompts.
+* ✅ Fast local testing loop works without wake word chain.
+* ✅ GPT replies feel situationally aware.
+* ✅ Audio input successfully integrated with context
+* ✅ Server properly handles context + audio transcription
+
+---
+
+## ✅ Deliverables:
+
+* ✅ SQLite DB with `family_profile` & `daily_context`.
+* ✅ Prompt Builder function.
+* ✅ CLI script (`run_test.py`) for isolated testing.
+* ✅ Basic test cases pass.
+* ✅ Audio integration with context working
+
+---
+
+## 🔄 Next Steps:
+
+1. Implement schedule modification via voice commands
+2. Add activity logging system
+3. Enhance context awareness for more complex queries
+4. Add error handling for context parsing
+5. Implement context validation
+6. Add context persistence between sessions
+
+---
+
+## 📝 Implementation Notes:
+
+* Server successfully handles both text and audio input with context
+* Context is properly injected into system prompt
+* Audio transcription works seamlessly with context
+* Database queries are working as expected
+* Need to implement schedule modification features
+* Activity logging system needs to be built
+

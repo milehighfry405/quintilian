@@ -226,16 +226,30 @@ class OpenVoiceAssistant:
                         context_dict = {}
                         logger.warning("No context found in database")
                     
-                    # Prepare the request data
-                    files = {'audio_file': ('audio.wav', audio_file, 'audio/wav')}
-                    data = {'context': context_dict} if context_dict else {}
+                    # Prepare the request - using the same approach as the test script
+                    files = {'audio_file': ('audio.wav', open(temp_file.name, 'rb'), 'audio/wav')}
+                    data = {
+                        'context': json.dumps(context_dict),
+                        'transcript': None  # Let the server transcribe the audio
+                    }
+
+                    # Debug logging
+                    logger.info("Request details:")
+                    logger.info(f"Files: {files}")
+                    logger.info(f"Data: {data}")
+                    logger.info(f"Context dict: {json.dumps(context_dict, indent=2)}")
+
+                    # Send request to server - using the same approach as the test script
                     logger.info(f"Sending request with data: {json.dumps(data, indent=2)}")
-                    
                     response = requests.post(
                         f"{self.server_url}/process-audio",
                         files=files,
-                        json=data
+                        data=data  # Send as form data, just like the test script
                     )
+                    
+                    # Debug logging for response
+                    logger.info(f"Response status: {response.status_code}")
+                    logger.info(f"Response content: {response.text}")
                     
                     if response.status_code == 200:
                         response_data = response.json()
