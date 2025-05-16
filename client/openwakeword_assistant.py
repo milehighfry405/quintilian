@@ -14,6 +14,8 @@ from openwakeword.model import Model
 from config import SERVER_URL, AUDIO_SETTINGS
 from prompt_builder import PromptBuilder
 import json
+from sqlalchemy import func
+import traceback
 
 print("Starting OpenWakeWord Assistant...")  # Test print statement
 
@@ -170,133 +172,267 @@ class OpenVoiceAssistant:
             return np.array([])
         
     def record_and_process_question(self):
-        """Record audio after wake word detection and process it."""
-        temp_file = None
         try:
+            logger.info("Wake word detected! Recording your question...")
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+            temp_file.close()  # Close the file so it can be used by sounddevice
+            
+            logger.info("Starting continuous recording...")
             recording = self.record_until_silence()
+            logger.info(f"Recording finished, duration: {len(recording)/self.RATE:.2f} seconds")
             
-            if len(recording) == 0:
-                logger.warning("No audio recorded, skipping processing")
-                return
-                
-            self.play_tone(self.processing_tone)
-            
-            temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
             logger.info(f"Saving recording to temporary file: {temp_file.name}")
             sf.write(temp_file.name, recording, self.RATE)
-            temp_file.close()
-                
-            logger.info(f"Sending audio to server at {self.server_url}/process-audio")
-            with open(temp_file.name, 'rb') as audio_file:
-                try:
-                    # Get context from local database
-                    context = self.prompt_builder.get_current_context()
-                    logger.info(f"Got context from database: {context}")
-                    
-                    # Convert context objects to dictionaries
-                    if context:
-                        try:
-                            context_dict = {
-                                "family": {
-                                    "child_name": context["family"].child_name,
-                                    "child_age": context["family"].child_age,
-                                    "preferences": context["family"].preferences
-                                },
-                                "daily_context": {
-                                    "schedule": context["daily_context"].schedule if context["daily_context"] else {},
-                                    "adjustments": context["daily_context"].adjustments if context["daily_context"] else {},
-                                    "mood_notes": context["daily_context"].mood_notes if context["daily_context"] else None
-                                },
-                                "recent_activities": [
-                                    {
-                                        "activity_name": activity.activity_name,
-                                        "start_time": activity.start_time.isoformat(),
-                                        "end_time": activity.end_time.isoformat() if activity.end_time else None,
-                                        "status": activity.status,
-                                        "notes": activity.notes
-                                    }
-                                    for activity in context["recent_activities"]
-                                ] if context["recent_activities"] else []
-                            }
-                            logger.info(f"Converted context to dictionary: {json.dumps(context_dict, indent=2)}")
-                        except Exception as e:
-                            logger.error(f"Error converting context to dictionary: {e}")
-                            context_dict = {}
-                    else:
-                        context_dict = {}
-                        logger.warning("No context found in database")
-                    
-                    # Prepare the request - using the same approach as the test script
-                    files = {'audio_file': ('audio.wav', open(temp_file.name, 'rb'), 'audio/wav')}
-                    data = {
-                        'context': json.dumps(context_dict),
-                        'transcript': None  # Let the server transcribe the audio
+            
+            # Get context from database
+            context = self.prompt_builder.get_current_context()
+            logger.info(f"Got context from database: {context}")
+            
+            # Convert context to dictionary format
+            context_dict = {
+                "family": {
+                    "child_name": context["family"].child_name,
+                    "child_age": context["family"].child_age,
+                    "preferences": context["family"].preferences
+                },
+                "daily_context": {
+                    "schedule": context["daily_context"].schedule,
+                    "adjustments": context["daily_context"].adjustments,
+                    "mood_notes": context["daily_context"].mood_notes
+                },
+                "recent_activities": [
+                    {
+                        "activity_name": activity.activity_name,
+                        "start_time": activity.start_time.isoformat(),
+                        "end_time": activity.end_time.isoformat() if activity.end_time else None,
+                        "status": activity.status,
+                        "notes": activity.notes
                     }
-
-                    # Debug logging
-                    logger.info("Request details:")
-                    logger.info(f"Files: {files}")
-                    logger.info(f"Data: {data}")
-                    logger.info(f"Context dict: {json.dumps(context_dict, indent=2)}")
-
-                    # Send request to server - using the same approach as the test script
-                    logger.info(f"Sending request with data: {json.dumps(data, indent=2)}")
-                    response = requests.post(
-                        f"{self.server_url}/process-audio",
-                        files=files,
-                        data=data  # Send as form data, just like the test script
-                    )
-                    
-                    # Debug logging for response
-                    logger.info(f"Response status: {response.status_code}")
-                    logger.info(f"Response content: {response.text}")
-                    
-                    if response.status_code == 200:
-                        response_data = response.json()
-                        if 'audio_url' in response_data and 'text' in response_data:
-                            self.download_and_play_audio(response_data['audio_url'], response_data['text'])
-                        else:
-                            logger.error("Invalid response format from server")
-                    else:
-                        logger.error(f"Server returned error: {response.status_code}")
-                        logger.error(f"Server response content: {response.text}")
-                        
-                except requests.exceptions.RequestException as e:
-                    logger.error(f"Error sending audio to server: {e}")
-                    
-        except Exception as e:
-            logger.error(f"Error in record_and_process_question: {e}")
-        finally:
-            if temp_file and os.path.exists(temp_file.name):
-                os.unlink(temp_file.name)
+                    for activity in context["recent_activities"]
+                ]
+            }
+            logger.info(f"Converted context to dictionary: {json.dumps(context_dict, indent=2)}")
+            
+            # Prepare the request
+            files = {
+                'audio_file': ('audio.wav', open(temp_file.name, 'rb'), 'audio/wav')
+            }
+            data = {
+                'context': json.dumps(context_dict),
+                'transcript': None
+            }
+            
+            logger.info("Request details:")
+            logger.info(f"Files: {files}")
+            logger.info(f"Data: {data}")
+            
+            # Send the request
+            logger.info(f"Sending audio to server at {self.server_url}/process-audio")
+            logger.info(f"Sending request with data: {json.dumps(data, indent=2)}")
+            response = requests.post(
+                f"{self.server_url}/process-audio",
+                files=files,
+                data=data
+            )
+            
+            # Close the file handle
+            files['audio_file'][1].close()
+            
+            logger.info(f"Response status: {response.status_code}")
+            logger.info(f"Response content: {response.text}")
+            
+            if response.status_code == 200:
+                response_data = response.json()
                 
-    def download_and_play_audio(self, audio_url, response_text):
-        """Download the audio file from the server and play it."""
-        full_url = f"{self.server_url}{audio_url}"
-        logger.info(f"Downloading audio from {full_url}...")
-        response = requests.get(full_url)
-        if response.status_code == 200:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"response_{timestamp}.wav"
-            filepath = os.path.join(self.audio_dir, filename)
+                # Check if there's an action in the response
+                if response_data.get('action'):
+                    action = response_data['action']
+                    logger.info(f"Action detected: {json.dumps(action, indent=2)}")
+                    
+                    if action['type'] == 'update_schedule':
+                        # Update the schedule in the database
+                        self.update_schedule({
+                            "activity_name": action['activity'],
+                            "new_time": action['new_start_time']
+                        })
+                
+                # Play the audio response
+                if response_data.get('audio_url'):
+                    audio_url = response_data['audio_url']  # Don't prefix with server_url since it's already included
+                    logger.info(f"Playing audio response from: {audio_url}")
+                    self.download_and_play_audio(audio_url)
+            else:
+                logger.error(f"Server returned error: {response.status_code}")
+                logger.error(f"Server response content: {response.text}")
+                
+        except Exception as e:
+            logger.error(f"Error in record_and_process_question: {str(e)}")
+            logger.error(traceback.format_exc())
+        finally:
+            # Try to clean up the temporary file, but don't fail if we can't
+            try:
+                if 'temp_file' in locals():
+                    os.unlink(temp_file.name)
+                    logger.info("Temporary file cleaned up")
+            except Exception as e:
+                logger.warning(f"Could not clean up temporary file: {str(e)}")
+                
+    def update_schedule(self, modification):
+        """Update the schedule in the database based on server response."""
+        try:
+            from database import get_db, DailyContext
+            from datetime import datetime
             
-            with open(filepath, "wb") as f:
-                f.write(response.content)
-            logger.info(f"Audio saved as {filepath}")
+            db = next(get_db())
+            today = datetime.now().date()
             
-            text_filepath = os.path.join(self.audio_dir, f"response_{timestamp}.txt")
-            with open(text_filepath, "w") as f:
-                f.write(response_text)
+            # Get today's context
+            daily_context = db.query(DailyContext).filter(
+                func.date(DailyContext.date) == today
+            ).first()
             
-            data, samplerate = sf.read(filepath)
-            sd.play(data, samplerate)
-            sd.wait()
+            if not daily_context:
+                logger.error("No daily context found for today")
+                return False
+                
+            # Update the schedule
+            schedule = daily_context.schedule or {}
+            activity_name = modification["activity_name"]
+            new_time = modification["new_time"]
+            logger.info(f"Schedule before update: {schedule}")
             
-            # Restart wake word detection
-            self.start()
-        else:
-            logger.error(f"Failed to download audio: {response.status_code}")
+            if activity_name in schedule:
+                # Store original time before updating
+                original_time = schedule[activity_name]
+                
+                # Update the schedule
+                schedule[activity_name] = new_time
+                
+                # Add to adjustments
+                adjustments = daily_context.adjustments or {}
+                if activity_name not in adjustments:
+                    adjustments[activity_name] = {}
+                    
+                adjustments[activity_name] = {
+                    "original_time": original_time,
+                    "new_time": new_time,
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+                # Update the database
+                daily_context.schedule = schedule
+                daily_context.adjustments = adjustments
+                logger.info(f"Schedule after update: {daily_context.schedule}")
+                db.commit()
+                logger.info(f"Successfully updated schedule for {activity_name}")
+                return True
+            else:
+                logger.error(f"Activity {activity_name} not found in schedule")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error updating schedule: {e}")
+            logger.error(traceback.format_exc())
+            db.rollback()
+            return False
+        finally:
+            db.close()
+
+    def process_gpt_response(self, response_text):
+        """Process GPT response for schedule modifications."""
+        try:
+            # Check if the response indicates a schedule modification
+            if "delay" in response_text.lower() and "minutes" in response_text.lower():
+                # Extract modification details from the response
+                import re
+                
+                # Look for patterns like "delay X minutes" or "postpone by X minutes"
+                delay_match = re.search(r'(?:delay|postpone).*?(\d+).*?minutes', response_text.lower())
+                if delay_match:
+                    delay_minutes = int(delay_match.group(1))
+                    
+                    # Look for activity name (this is a simple implementation)
+                    activity_match = re.search(r'(?:delay|postpone)\s+(\w+)', response_text.lower())
+                    if activity_match:
+                        activity_name = activity_match.group(1)
+                        
+                        # Get current schedule to find original time
+                        from database import get_db, DailyContext
+                        from datetime import datetime
+                        
+                        db = next(get_db())
+                        today = datetime.now().date()
+                        daily_context = db.query(DailyContext).filter(
+                            func.date(DailyContext.date) == today
+                        ).first()
+                        
+                        if daily_context and daily_context.schedule:
+                            schedule = daily_context.schedule
+                            if activity_name in schedule:
+                                original_time = schedule[activity_name]["time"]
+                                
+                                # Calculate new time
+                                from datetime import datetime, timedelta
+                                original_dt = datetime.strptime(original_time, "%H:%M")
+                                new_dt = original_dt + timedelta(minutes=delay_minutes)
+                                new_time = new_dt.strftime("%H:%M")
+                                
+                                # Log the modification details
+                                logger.info(f"Modifying schedule: {activity_name} from {original_time} to {new_time} (delay: {delay_minutes} minutes)")
+                                
+                                # Send modification to server
+                                modification = {
+                                    "activity_name": activity_name,
+                                    "delay_minutes": delay_minutes,
+                                    "original_time": original_time,
+                                    "new_time": new_time
+                                }
+                                
+                                response = requests.post(
+                                    f"{self.server_url}/modify-schedule",
+                                    json=modification
+                                )
+                                
+                                if response.status_code == 200:
+                                    # Update local database
+                                    success = self.update_schedule(modification)
+                                    if success:
+                                        logger.info("Schedule updated successfully in local database.")
+                                    else:
+                                        logger.error("Failed to update schedule in local database.")
+                                    return success
+                                else:
+                                    logger.error(f"Server returned status code {response.status_code} for schedule modification.")
+                        else:
+                            logger.error("No daily context or schedule found for today.")
+            return False
+        except Exception as e:
+            logger.error(f"Error processing GPT response: {e}")
+            return False
             
+    def download_and_play_audio(self, audio_url):
+        """Download and play audio response."""
+        try:
+            # Download and play the audio
+            response = requests.get(f"{self.server_url}{audio_url}")
+            if response.status_code == 200:
+                audio_data = response.content
+                audio_file = os.path.join(self.audio_dir, "response.wav")
+                with open(audio_file, "wb") as f:
+                    f.write(audio_data)
+                
+                # Play the audio
+                data, samplerate = sf.read(audio_file)
+                sd.play(data, samplerate)
+                sd.wait()
+                
+                # Clean up
+                os.remove(audio_file)
+            else:
+                logger.error(f"Failed to download audio: {response.status_code}")
+        except Exception as e:
+            logger.error(f"Error playing audio: {e}")
+
     def start(self):
         """Start the voice assistant."""
         logger.info("Starting OpenVoice Assistant...")

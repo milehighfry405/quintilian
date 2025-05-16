@@ -224,3 +224,14 @@ Everything is **backed by science, explained transparently, and feels like a cal
 
 ---
 
+# MVP Testing Strategy
+
+For each MVP feature, a dedicated folder will be created under client/tests/ (e.g., MVP Feature 1, MVP Feature 2, etc.). These folders will contain test scripts and related files to validate the feature's functionality. Once the tests are confirmed working, the code will be incorporated into the main project, and the test folders will be kept for reference/notes.
+
+Example:
+- client/tests/MVP Feature 1/
+- client/tests/MVP Feature 2/
+- etc.
+
+This approach ensures that each feature is thoroughly tested before integration and provides a clear record of the testing process.
+

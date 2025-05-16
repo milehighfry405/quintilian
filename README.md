@@ -93,4 +93,31 @@ client/
 
 ## 📝 License
 
-This project is proprietary and confidential. 
+This project is proprietary and confidential.
+
+## Deployment Script: server/deploy.py
+
+The `server/deploy.py` script automates deployment of the server's `main.py` to your remote server. It performs the following steps:
+
+1. Copies your local `main.py` to `/home/ubuntu/server/main.py` on the remote server using SCP.
+2. Restarts the FastAPI service (assumed to be managed by systemd as `quintilian`).
+3. Checks the server health at `http://<SERVER_IP>:8000/health` and prints status updates.
+
+### Usage
+
+1. Ensure your SSH key (`q key.pem`) is in the project root directory.
+2. Make sure your local `main.py` is up to date.
+3. By default, the script assumes the systemd service is named `quintilian`. If your service has a different name, update the `SERVICE_NAME` variable in `deploy.py`.
+4. Run the script from the project root:
+
+```bash
+python server/deploy.py
+```
+
+The script will print progress and let you know if the deployment was successful or if any errors occurred.
+
+### Prerequisites
+- Python 3.x
+- `requests` library installed (`pip install requests`)
+- SSH access to the server with the specified key
+- The remote server must have a systemd service for the FastAPI app 

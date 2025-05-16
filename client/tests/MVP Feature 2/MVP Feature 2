@@ -1,3 +1,7 @@
+# MVP Feature 2 Notes and Test Scripts
+
+This file contains notes and test scripts for MVP Feature 2. The test_text_endpoint.py script is used to validate the text-only endpoint for this feature.
+
 ---
 
 ## 🛠 `assistant-memory-prompt-mvp.md`
