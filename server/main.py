@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import openai
@@ -59,7 +59,11 @@ class ErrorResponse(BaseModel):
     detail: str
 
 @app.post("/process-audio", response_model=AudioResponse, responses={500: {"model": ErrorResponse}})
-async def process_audio(audio_file: UploadFile = File(...), context: Optional[Dict[str, Any]] = None):
+async def process_audio(
+    audio_file: UploadFile = File(...),
+    context: Optional[str] = Form(None),
+    transcript: Optional[str] = Form(None)
+):
     try:
         logger.info("Starting audio processing")
         
@@ -70,21 +74,36 @@ async def process_audio(audio_file: UploadFile = File(...), context: Optional[Di
             temp_file_path = temp_file.name
             logger.info(f"Saved temporary file to {temp_file_path}")
 
-        # Transcribe audio using Whisper
-        logger.info("Starting Whisper transcription")
-        with open(temp_file_path, "rb") as audio_file:
-            transcript = openai.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio_file
-            )
-        logger.info(f"Transcription completed: {transcript.text}")
+        # Parse context if provided
+        context_dict = None
+        if context:
+            try:
+                context_dict = json.loads(context)
+                logger.info(f"Successfully parsed context JSON: {json.dumps(context_dict, indent=2)}")
+            except Exception as e:
+                logger.warning(f"Could not parse context JSON: {e}")
+                context_dict = None
+        
+        # Use provided transcript or transcribe audio using Whisper
+        if transcript:
+            logger.info(f"Using provided transcript: {transcript}")
+            transcript_text = transcript
+        else:
+            logger.info("Starting Whisper transcription")
+            with open(temp_file_path, "rb") as audio_file:
+                transcript_obj = openai.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file
+                )
+            transcript_text = transcript_obj.text
+        logger.info(f"Using transcript: {transcript_text}")
         
         # Build the prompt with context if available
-        if context:
-            logger.info(f"Received context from client: {json.dumps(context, indent=2)}")
-            family = context.get("family", {})
-            daily_context = context.get("daily_context", {})
-            recent_activities = context.get("recent_activities", [])
+        if context_dict:
+            logger.info(f"Building prompt with context")
+            family = context_dict.get("family", {})
+            daily_context = context_dict.get("daily_context", {})
+            recent_activities = context_dict.get("recent_activities", [])
             
             system_prompt = f"""You are Quintilian, a helpful and friendly AI assistant for {family.get('child_name', 'the child')} (age {family.get('child_age', 'unknown')}).
 
@@ -103,14 +122,11 @@ Please respond in a way that:
 3. Considers the child's preferences
 4. Provides helpful, age-appropriate responses"""
             logger.info(f"Built system prompt with context: {system_prompt}")
-            user_message = (
-                f"User context for today: {json.dumps(context, indent=2)}\n\n"
-                f"User question: {transcript.text}"
-            )
+            user_message = transcript_text  # Just use the transcript directly
         else:
             logger.warning("No context received from client")
             system_prompt = "You are Quintilian, a helpful and friendly AI assistant. Keep your responses concise and engaging."
-            user_message = transcript.text
+            user_message = transcript_text
         
         # Get GPT-4 response
         logger.info("Getting GPT-4 response")
