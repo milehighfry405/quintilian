@@ -12,6 +12,7 @@ from pydantic import BaseModel
 import logging
 import traceback
 import requests
+from typing import Optional, Dict, Any
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -58,7 +59,7 @@ class ErrorResponse(BaseModel):
     detail: str
 
 @app.post("/process-audio", response_model=AudioResponse, responses={500: {"model": ErrorResponse}})
-async def process_audio(audio_file: UploadFile = File(...)):
+async def process_audio(audio_file: UploadFile = File(...), context: Optional[Dict[str, Any]] = None):
     try:
         logger.info("Starting audio processing")
         
@@ -78,13 +79,46 @@ async def process_audio(audio_file: UploadFile = File(...)):
             )
         logger.info(f"Transcription completed: {transcript.text}")
         
+        # Build the prompt with context if available
+        if context:
+            logger.info(f"Received context from client: {json.dumps(context, indent=2)}")
+            family = context.get("family", {})
+            daily_context = context.get("daily_context", {})
+            recent_activities = context.get("recent_activities", [])
+            
+            system_prompt = f"""You are Quintilian, a helpful and friendly AI assistant for {family.get('child_name', 'the child')} (age {family.get('child_age', 'unknown')}).
+
+Current Schedule:
+{json.dumps(daily_context.get('schedule', {}), indent=2) if daily_context.get('schedule') else "No schedule set for today."}
+
+Recent Activities:
+{json.dumps([{"name": a.get('activity_name'), "time": a.get('start_time'), "status": a.get('status')} for a in recent_activities], indent=2) if recent_activities else "No recent activities."}
+
+Child's Preferences:
+{json.dumps(family.get('preferences', {}), indent=2) if family.get('preferences') else "No preferences set."}
+
+Please respond in a way that:
+1. Acknowledges the current schedule and activities
+2. Maintains consistency with previous activities
+3. Considers the child's preferences
+4. Provides helpful, age-appropriate responses"""
+            logger.info(f"Built system prompt with context: {system_prompt}")
+            user_message = (
+                f"User context for today: {json.dumps(context, indent=2)}\n\n"
+                f"User question: {transcript.text}"
+            )
+        else:
+            logger.warning("No context received from client")
+            system_prompt = "You are Quintilian, a helpful and friendly AI assistant. Keep your responses concise and engaging."
+            user_message = transcript.text
+        
         # Get GPT-4 response
         logger.info("Getting GPT-4 response")
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are Quintilian, a helpful and friendly AI assistant. Keep your responses concise and engaging."},
-                {"role": "user", "content": transcript.text}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
             ]
         )
         

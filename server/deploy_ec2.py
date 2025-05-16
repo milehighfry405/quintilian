@@ -130,7 +130,7 @@ def deploy_server(public_ip, key_name):
         
         # Copy current directory contents
         for item in os.listdir("."):
-            if item not in ["deploy_temp", "deploy_ec2.py", "quintilian-key.pem"]:
+            if item not in ["deploy_temp", "deploy_ec2.py", "q key.pem"]:
                 if os.path.isdir(item):
                     shutil.copytree(item, deploy_dir / item)
                 else:
@@ -182,7 +182,7 @@ ELEVENLABS_API_KEY={os.getenv('ELEVENLABS_API_KEY')}
             f.write(env_content)
         
         # SFTP upload
-        key = paramiko.RSAKey.from_private_key_file(f"{key_name}.pem")
+        key = paramiko.RSAKey.from_private_key_file("q key.pem")
         transport = paramiko.Transport((public_ip, 22))
         transport.connect(username="ubuntu", pkey=key)
         sftp = paramiko.SFTPClient.from_transport(transport)
@@ -210,7 +210,7 @@ ELEVENLABS_API_KEY={os.getenv('ELEVENLABS_API_KEY')}
         # SSH and run deploy.sh
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(public_ip, username="ubuntu", key_filename=f"{key_name}.pem")
+        ssh.connect(public_ip, username="ubuntu", key_filename="q key.pem")
         stdin, stdout, stderr = ssh.exec_command("bash /tmp/deploy/deploy.sh")
         print(stdout.read().decode())
         print(stderr.read().decode())
@@ -248,7 +248,7 @@ def main():
     ec2_client = boto3.client("ec2")
     
     # Configuration
-    key_name = "quintilian-key"
+    key_name = "q-key"  # Changed to match your key name
     security_group_name = "quintilian-sg"
     
     # Create key pair
@@ -267,9 +267,9 @@ def main():
     
     print("\nInstance created successfully!")
     print(f"Public IP: {public_ip}")
-    print(f"Key file: {key_name}.pem")
+    print(f"Key file: q key.pem")
     print("\nTo SSH into the instance:")
-    print(f"ssh -i {key_name}.pem ubuntu@{public_ip}")
+    print(f"ssh -i \"q key.pem\" ubuntu@{public_ip}")
 
 if __name__ == "__main__":
     main() 

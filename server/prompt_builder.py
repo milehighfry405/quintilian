@@ -1,53 +1,43 @@
 from database import get_db, FamilyProfile, DailyContext, ActivityLog
 from datetime import datetime, timedelta
 import json
-import logging
-from sqlalchemy import func
-
-logger = logging.getLogger(__name__)
 
 class PromptBuilder:
     def __init__(self):
-        pass
+        self.db = next(get_db())
         
     def get_current_context(self):
-        """Get current context from database"""
+        """Get the current family profile and daily context."""
         try:
-            db = next(get_db())
-            logger.info("Getting family profile from database")
-            family = db.query(FamilyProfile).first()
-            logger.info(f"Found family profile: {family}")
-            
+            # Get the family profile (assuming single family for now)
+            family = self.db.query(FamilyProfile).first()
             if not family:
-                logger.warning("No family profile found in database")
                 return None
-            
-            logger.info("Getting today's context from database")
+                
+            # Get today's context
             today = datetime.now().date()
-            daily_context = db.query(DailyContext).filter(
-                func.date(DailyContext.date) == today,
-                DailyContext.family_id == family.id
+            daily_context = self.db.query(DailyContext).filter(
+                DailyContext.family_id == family.id,
+                DailyContext.date >= today,
+                DailyContext.date < today + timedelta(days=1)
             ).first()
-            logger.info(f"Found daily context: {daily_context}")
             
-            logger.info("Getting recent activities from database")
-            recent_activities = db.query(ActivityLog).filter(
-                ActivityLog.start_time >= datetime.now() - timedelta(hours=24)
+            # Get recent activities
+            recent_activities = self.db.query(ActivityLog).filter(
+                ActivityLog.family_id == family.id,
+                ActivityLog.start_time >= today
             ).order_by(ActivityLog.start_time.desc()).all()
-            logger.info(f"Found {len(recent_activities)} recent activities")
             
-            context = {
+            return {
                 "family": family,
                 "daily_context": daily_context,
                 "recent_activities": recent_activities
             }
-            logger.info(f"Returning context: {context}")
-            return context
         except Exception as e:
-            logger.error(f"Error getting context from database: {e}")
+            print(f"Error getting context: {e}")
             return None
         finally:
-            db.close()
+            self.db.close()
             
     def build_prompt(self, user_input):
         """Build a context-aware prompt for GPT-4."""

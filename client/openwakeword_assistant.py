@@ -13,6 +13,7 @@ import openwakeword
 from openwakeword.model import Model
 from config import SERVER_URL, AUDIO_SETTINGS
 from prompt_builder import PromptBuilder
+import json
 
 print("Starting OpenWakeWord Assistant...")  # Test print statement
 
@@ -32,6 +33,7 @@ class OpenVoiceAssistant:
         self.should_stop_recording = False
         self.last_wake_word_time = 0
         self.wake_word_cooldown = 2.0
+        self.prompt_builder = PromptBuilder()
         
         # Create audio directory if it doesn't exist
         self.audio_dir = os.path.join(os.path.dirname(__file__), "audio")
@@ -54,7 +56,7 @@ class OpenVoiceAssistant:
         # Generate feedback tones
         self.wake_tone = self.generate_tone(1000, 0.5)  # 1kHz for 0.5 seconds
         self.listening_tone = self.generate_tone(800, 0.3)  # 800Hz for 0.3 seconds
-        self.processing_tone = self.generate_tone(600, 0.3)  # 600Hz for 0.3 seconds
+        self.processing_tone = self.generate_tone(600, 0.3)
         self.stop_tone = self.generate_tone(400, 0.2)  # 400Hz for 0.2 seconds
         
     def generate_tone(self, frequency, duration):
@@ -187,8 +189,53 @@ class OpenVoiceAssistant:
             logger.info(f"Sending audio to server at {self.server_url}/process-audio")
             with open(temp_file.name, 'rb') as audio_file:
                 try:
+                    # Get context from local database
+                    context = self.prompt_builder.get_current_context()
+                    logger.info(f"Got context from database: {context}")
+                    
+                    # Convert context objects to dictionaries
+                    if context:
+                        try:
+                            context_dict = {
+                                "family": {
+                                    "child_name": context["family"].child_name,
+                                    "child_age": context["family"].child_age,
+                                    "preferences": context["family"].preferences
+                                },
+                                "daily_context": {
+                                    "schedule": context["daily_context"].schedule if context["daily_context"] else {},
+                                    "adjustments": context["daily_context"].adjustments if context["daily_context"] else {},
+                                    "mood_notes": context["daily_context"].mood_notes if context["daily_context"] else None
+                                },
+                                "recent_activities": [
+                                    {
+                                        "activity_name": activity.activity_name,
+                                        "start_time": activity.start_time.isoformat(),
+                                        "end_time": activity.end_time.isoformat() if activity.end_time else None,
+                                        "status": activity.status,
+                                        "notes": activity.notes
+                                    }
+                                    for activity in context["recent_activities"]
+                                ] if context["recent_activities"] else []
+                            }
+                            logger.info(f"Converted context to dictionary: {json.dumps(context_dict, indent=2)}")
+                        except Exception as e:
+                            logger.error(f"Error converting context to dictionary: {e}")
+                            context_dict = {}
+                    else:
+                        context_dict = {}
+                        logger.warning("No context found in database")
+                    
+                    # Prepare the request data
                     files = {'audio_file': ('audio.wav', audio_file, 'audio/wav')}
-                    response = requests.post(f"{self.server_url}/process-audio", files=files)
+                    data = {'context': context_dict} if context_dict else {}
+                    logger.info(f"Sending request with data: {json.dumps(data, indent=2)}")
+                    
+                    response = requests.post(
+                        f"{self.server_url}/process-audio",
+                        files=files,
+                        json=data
+                    )
                     
                     if response.status_code == 200:
                         response_data = response.json()

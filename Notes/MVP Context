@@ -202,3 +202,25 @@ Everything is **backed by science, explained transparently, and feels like a cal
 * Treat the GPT like an **LLM brain-in-a-jar** — you **feed it structured memory via prompt**.
 * **Focus first on predictable, rule-based behavior. Magic will come from your memory and context injection, not from GPT trying to be creative.**
 
+## MVP Context Update (2024-05-15)
+
+**Current State:**
+- The database has been reset to a minimal, simple schedule (wake up, lunch, dinner, bed) for debugging.
+- The client sends the correct context (family, daily_context, recent_activities) to the server, and the server logs confirm the data is received in the expected format.
+
+**Issue:**
+- The assistant sometimes generates responses referencing activities (e.g., dentist, team meeting) that are not present in the database or context sent.
+- This suggests GPT is hallucinating or not strictly following the provided context.
+
+**What We've Tried:**
+- Wiped and rebuilt the database with only the minimal schedule.
+- Verified the context sent from client to server is correct and matches the database.
+- Confirmed the server logs the prompt being sent to OpenAI.
+- Ensured no extra activities or schedules exist in the database.
+
+**Next Steps:**
+- Monitor the prompt and GPT responses closely to determine if further prompt engineering or stricter context formatting is needed.
+- Consider logging the full prompt and GPT response to a file for easier debugging if hallucinations persist.
+
+---
+
